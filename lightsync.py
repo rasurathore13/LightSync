@@ -8,6 +8,7 @@ import tuyapy
 import json
 import time
 import os
+import json
    
 
 def get_colors(image_file, numcolors=1, resize=150):
@@ -103,9 +104,14 @@ if __name__ == '__main__':
                 'brightness' : 1.0
             }
             response = api.device_control(device_id,  'colorSet', {'color': hsv})
-            print(response)
-            time.sleep(5)
-
+            try:
+                if str(response[1]['header']['code']).upper() == 'SUCCESS':
+                    continue
+                else:
+                    print(response)
+            except Exception as ex:
+                print(ex)
+            print(response[1]['header']['code'])
         except Exception as e:
             print(e)
 
