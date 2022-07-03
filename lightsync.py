@@ -4,7 +4,9 @@ import cv2
 import pyautogui
 import colorsys
 from tuyapy import TuyaApi
+import tuyapy
 import json
+import time
 import os
    
 
@@ -67,8 +69,18 @@ if __name__ == '__main__':
     
     device_id = config['device_id']
 
-    api = TuyaApi()
-    api.init(config['email'], config['username'], config['phone_code'], config['application'])
+    while True:
+        try:
+            api = TuyaApi()
+            api.init(config['email'], config['username'], config['phone_code'], config['application'])
+        except tuyapy.tuyaapi.TuyaAPIException as e:
+                print('Error -> We can not authenticate twice in a minute.')
+                print("Waiting 15 secs to retry authentication.")
+                print('')
+                time.sleep(15)
+                continue
+        else:
+            break
     #---------------------- Initialization Done ----------------------
 
     #---------------------- Starting the loop to take screebshots and updadte the smart bulb ----------------------
@@ -83,14 +95,18 @@ if __name__ == '__main__':
             colors = get_colors(input_file)
             #save_palette(colors, outfile = colour_pallet_path)
             r,g,b = colors[0][0], colors[0][1], colors[0][2]
+
             h, s, v = colorsys.rgb_to_hsv(r,g,b)
             hsv = {
-                'hue' : h,
-                'saturation': s,
-                'brightness' : v
+                'hue' : h*360,
+                'saturation': 1.0,
+                'brightness' : 1.0
             }
-            print(hsv)
-            print(api.device_control(device_id,  'colorSet', {'color': hsv}))
+            response = api.device_control(device_id,  'colorSet', {'color': hsv})
+            print(response)
+            time.sleep(5)
 
         except Exception as e:
             print(e)
+
+        
