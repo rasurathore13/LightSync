@@ -57,6 +57,7 @@ def read_config():
         return config
 
 
+
 if __name__ == '__main__':
 
     #---------------------- Initializing Section ----------------------
@@ -73,7 +74,7 @@ if __name__ == '__main__':
     while True:
         try:
             api = TuyaApi()
-            api.init(config['email'], config['username'], config['phone_code'], config['application'])
+            api.init(config['email'], config['password'], config['phone_code'], config['application'])
         except tuyapy.tuyaapi.TuyaAPIException as e:
                 print('Error -> We can not authenticate twice in a minute.')
                 print("Waiting 15 secs to retry authentication.")
@@ -85,6 +86,7 @@ if __name__ == '__main__':
     #---------------------- Initialization Done ----------------------
 
     #---------------------- Starting the loop to take screebshots and updadte the smart bulb ----------------------
+    #print(api.discover_devices())
     while True:
         image = pyautogui.screenshot()
         image = cv2.cvtColor(np.array(image),
@@ -101,9 +103,9 @@ if __name__ == '__main__':
             hsv = {
                 'hue' : h*360,
                 'saturation': 1.0,
-                'brightness' : 1.0
+                'brightness' : 0.75
             }
-            response = api.device_control(device_id,  'colorSet', {'color': hsv})
+            response = api.device_control(device_id,  'colorSet', {'color': hsv})            
             try:
                 if str(response[1]['header']['code']).upper() == 'SUCCESS':
                     continue
