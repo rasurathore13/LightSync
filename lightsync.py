@@ -125,7 +125,7 @@ if __name__ == '__main__':
         image = cv2.cvtColor(np.array(image),
                             cv2.COLOR_RGB2BGR)
         cv2.imwrite(capture_path, image)
-        test_ai_to_get_background_color(capture_path)
+        #test_ai_to_get_background_color(capture_path)
         input_file = capture_path
         try:
             colors = get_colors(input_file)
