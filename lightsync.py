@@ -17,6 +17,28 @@ import numpy as np
 
 
 
+def get_colors(image_file, numcolors=1, resize=150):
+    # Resize image to speed up processing
+    img = Image.open(image_file)
+    img = img.copy()
+    img.thumbnail((resize, resize))
+
+    # Reduce to palette
+    paletted = img.convert('P', palette=Image.ADAPTIVE, colors=numcolors)
+
+    # Find dominant colors
+    palette = paletted.getpalette()
+    #print(palette)
+    color_counts = sorted(paletted.getcolors(), reverse=True)
+    #print(color_counts)
+    colors = list()
+    for i in range(numcolors):
+        palette_index = color_counts[i][1]
+        dominant_color = palette[palette_index*3:palette_index*3+3]
+        colors.append(tuple(dominant_color))
+
+    return colors
+
 def save_palette(colors, swatchsize=20, outfile="palette.png" ):
     num_colors = len(colors)
     palette = Image.new('RGB', (swatchsize*num_colors, swatchsize))
@@ -103,6 +125,7 @@ if __name__ == '__main__':
         image = cv2.cvtColor(np.array(image),
                             cv2.COLOR_RGB2BGR)
         cv2.imwrite(capture_path, image)
+        test_ai_to_get_background_color(capture_path)
         input_file = capture_path
         try:
             colors = get_colors(input_file)
