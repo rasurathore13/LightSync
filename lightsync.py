@@ -9,6 +9,39 @@ import json
 import time
 import os
 import json
+
+from PIL import Image
+from sklearn.cluster import KMeans
+import numpy as np
+
+
+def test_ai_to_get_background_color(image_path):
+    # Load the image
+    img = Image.open(image_path)
+
+    # Resize the image to a smaller size for performance reasons
+    img = img.resize((224, 224))
+
+    # Convert the image to a NumPy array and convert to LAB color space
+    img_array = np.array(img)
+    img_array = np.apply_along_axis(lambda x: np.dot(x, [0.299, 0.587, 0.114]), axis=-1, arr=img_array)
+    img_array = np.stack([img_array] * 3, axis=-1)
+    img_array = (img_array / 255.0) * 100
+    img_array = np.clip(img_array, 0, 100)
+    img_array = np.uint8(img_array)
+    img_array = Image.fromarray(img_array, mode='LAB')
+
+    # Use K-means clustering to group the colors in the image into clusters
+    kmeans = KMeans(n_clusters=5).fit(np.array(img_array).reshape(-1, 3))
+
+    # Determine the dominant color(s) by selecting the cluster(s) with the highest number of pixels
+    labels, counts = np.unique(kmeans.labels_, return_counts=True)
+    dominant_colors = []
+    for i in range(len(labels)):
+        if counts[i] > 1000: # threshold for color prevalence
+            dominant_colors.append(tuple(np.round(kmeans.cluster_centers_[i]).astype(int).tolist()))
+
+    print('Dominant colors:', dominant_colors)
    
 
 def get_colors(image_file, numcolors=1, resize=150):
@@ -56,6 +89,33 @@ def read_config():
         print('----------------------Finshed Reading Config ----------------------')
         return config
 
+def rgb_to_hsv(r, g, b):
+    r, g, b = r / 255.0, g / 255.0, b / 255.0
+    cmax, cmin = max(r, g, b), min(r, g, b)
+    delta = cmax - cmin
+
+    if delta == 0:
+       return (0, round(s*100),100)
+    elif cmax == r:
+        h = ((g - b) / delta) % 6
+    elif cmax == g:
+        h = ((b - r) / delta) + 2
+    else:
+        h = ((r - g) / delta) + 4
+
+    h = round(h * 60)
+    if h < 0:
+        h += 360
+
+    if cmax == 0:
+        s = 0
+    else:
+        s = delta / cmax
+
+    s = round(s * 100)
+    v = round(cmax * 100)
+
+    return (h, s, v)
 
 
 if __name__ == '__main__':
@@ -92,19 +152,25 @@ if __name__ == '__main__':
         image = cv2.cvtColor(np.array(image),
                             cv2.COLOR_RGB2BGR)
         cv2.imwrite(capture_path, image)
-
+        test_ai_to_get_background_color(capture_path)
         input_file = capture_path
         try:
             colors = get_colors(input_file)
             #save_palette(colors, outfile = colour_pallet_path)
             r,g,b = colors[0][0], colors[0][1], colors[0][2]
+            print('The original RGB Value r - {}, g - {}, b - {}'.format(round(r),round(g),round(b)))
 
             h, s, v = colorsys.rgb_to_hsv(r,g,b)
+            
+            r, g, b = r/255, g/255, b/255
+            
             hsv = {
                 'hue' : h*360,
-                'saturation': 1.0,
-                'brightness' : 0.75
+                'saturation': s,
+                'brightness' : max(r,g,b)*100
             }
+            
+            #print('The converted HSV Value H - {}, S - {}, V - {}'.format(round(hsv['hue'],2),round(hsv['saturation'],2),round(hsv['brightness'],2)))
             response = api.device_control(device_id,  'colorSet', {'color': hsv})            
             try:
                 if str(response[1]['header']['code']).upper() == 'SUCCESS':
