@@ -15,56 +15,7 @@ from sklearn.cluster import KMeans
 import numpy as np
 
 
-def test_ai_to_get_background_color(image_path):
-    # Load the image
-    img = Image.open(image_path)
 
-    # Resize the image to a smaller size for performance reasons
-    img = img.resize((224, 224))
-
-    # Convert the image to a NumPy array and convert to LAB color space
-    img_array = np.array(img)
-    img_array = np.apply_along_axis(lambda x: np.dot(x, [0.299, 0.587, 0.114]), axis=-1, arr=img_array)
-    img_array = np.stack([img_array] * 3, axis=-1)
-    img_array = (img_array / 255.0) * 100
-    img_array = np.clip(img_array, 0, 100)
-    img_array = np.uint8(img_array)
-    img_array = Image.fromarray(img_array, mode='LAB')
-
-    # Use K-means clustering to group the colors in the image into clusters
-    kmeans = KMeans(n_clusters=5).fit(np.array(img_array).reshape(-1, 3))
-
-    # Determine the dominant color(s) by selecting the cluster(s) with the highest number of pixels
-    labels, counts = np.unique(kmeans.labels_, return_counts=True)
-    dominant_colors = []
-    for i in range(len(labels)):
-        if counts[i] > 1000: # threshold for color prevalence
-            dominant_colors.append(tuple(np.round(kmeans.cluster_centers_[i]).astype(int).tolist()))
-
-    print('Dominant colors:', dominant_colors)
-   
-
-def get_colors(image_file, numcolors=1, resize=150):
-    # Resize image to speed up processing
-    img = Image.open(image_file)
-    img = img.copy()
-    img.thumbnail((resize, resize))
-
-    # Reduce to palette
-    paletted = img.convert('P', palette=Image.ADAPTIVE, colors=numcolors)
-
-    # Find dominant colors
-    palette = paletted.getpalette()
-    #print(palette)
-    color_counts = sorted(paletted.getcolors(), reverse=True)
-    #print(color_counts)
-    colors = list()
-    for i in range(numcolors):
-        palette_index = color_counts[i][1]
-        dominant_color = palette[palette_index*3:palette_index*3+3]
-        colors.append(tuple(dominant_color))
-
-    return colors
 
 def save_palette(colors, swatchsize=20, outfile="palette.png" ):
     num_colors = len(colors)
@@ -152,7 +103,6 @@ if __name__ == '__main__':
         image = cv2.cvtColor(np.array(image),
                             cv2.COLOR_RGB2BGR)
         cv2.imwrite(capture_path, image)
-        test_ai_to_get_background_color(capture_path)
         input_file = capture_path
         try:
             colors = get_colors(input_file)
